@@ -2,7 +2,11 @@
 
 Fork of [https://github.com/actuallymentor/battery](https://github.com/actuallymentor/battery).
 Stripped of GUI. Adjusted the config directory to XDG_CONFIG_DIR || ~/.config/battery.
-Install with ```brew tap audivir; brew install battery-cli;
+Install with:
+```bash
+brew tap audivir/repo;
+brew install battery-cli
+```
 
 # Battery charge limiter for Apple Silicon Macbook devices
 
