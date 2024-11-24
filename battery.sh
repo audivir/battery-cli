@@ -12,16 +12,32 @@ PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin
 ## ###############
 ## Variables
 ## ###############
-binfolder=/usr/local/bin
+# Determine the Homebrew etc directory
+smc_executable=$(which smc)
+battery_executable=$(which battery)
+if [[ -z "$smc_executable" ]]; then
+	echo "Error: smc tool not found. Please reinstall the battery utility."
+	exit 1
+fi
+
+if [ ! -z "$XDG_CONFIG_HOME" ]; then
+  CONFIG_DIR="$XDG_CONFIG_HOME/battery"
+else
+  CONFIG_DIR="$HOME/.config/battery"
+fi
+
+pidfile=$CONFIG_DIR/battery.pid
+logfile=$CONFIG_DIR/battery.log
+maintain_percentage_tracker_file=$CONFIG_DIR/maintain.percentage
+maintain_voltage_tracker_file=$CONFIG_DIR/maintain.voltage
+calibrate_pidfile=$CONFIG_DIR/calibrate.pid
+
 visudo_folder=/private/etc/sudoers.d
 visudo_file=${visudo_folder}/battery
-configfolder=$HOME/.battery
-pidfile=$configfolder/battery.pid
-logfile=$configfolder/battery.log
-maintain_percentage_tracker_file=$configfolder/maintain.percentage
-maintain_voltage_tracker_file=$configfolder/maintain.voltage
+
 daemon_path=$HOME/Library/LaunchAgents/battery.plist
-calibrate_pidfile=$configfolder/calibrate.pid
+
+
 
 # Voltage limits
 voltage_min="10.5"
@@ -34,7 +50,7 @@ voltage_hyst_max="2"
 ## ###############
 
 # Create config folder if needed
-mkdir -p $configfolder
+mkdir -p $CONFIG_DIR
 
 # create logfile if needed
 touch $logfile
@@ -109,11 +125,11 @@ Usage:
 visudoconfig="
 # Visudo settings for the battery utility installed from https://github.com/actuallymentor/battery
 # intended to be placed in $visudo_file on a mac
-Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r
-Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C -w 00
-Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r
-Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01
-Cmnd_Alias      LEDCONTROL = $binfolder/smc -k ACLC -w 04, $binfolder/smc -k ACLC -w 03, $binfolder/smc -k ACLC -w 02, $binfolder/smc -k ACLC -w 01, $binfolder/smc -k ACLC -w 00, $binfolder/smc -k ACLC -r
+Cmnd_Alias      BATTERYOFF = $smc_executable -k CH0B -w 02, $smc_executable -k CH0C -w 02, $smc_executable -k CH0B -r, $smc_executable -k CH0C -r
+Cmnd_Alias      BATTERYON = $smc_executable -k CH0B -w 00, $smc_executable -k CH0C -w 00
+Cmnd_Alias      DISCHARGEOFF = $smc_executable -k CH0I -w 00, $smc_executable -k CH0I -r
+Cmnd_Alias      DISCHARGEON = $smc_executable -k CH0I -w 01
+Cmnd_Alias      LEDCONTROL = $smc_executable -k ACLC -w 04, $smc_executable -k ACLC -w 03, $smc_executable -k ACLC -w 02, $smc_executable -k ACLC -w 01, $smc_executable -k ACLC -w 00, $smc_executable -k ACLC -r
 ALL ALL = NOPASSWD: BATTERYOFF
 ALL ALL = NOPASSWD: BATTERYON
 ALL ALL = NOPASSWD: DISCHARGEOFF
@@ -305,10 +321,10 @@ if [[ "$action" == "visudo" ]]; then
 
 	# Set visudo tempfile ownership to current user
 	log "Setting visudo file permissions to $setting"
-	sudo chown -R $setting $configfolder
+	sudo chown -R $setting $CONFIG_DIR
 
 	# Write the visudo file to a tempfile
-	visudo_tmpfile="$configfolder/visudo.tmp"
+	visudo_tmpfile="$CONFIG_DIR/visudo.tmp"
 	sudo rm visudo_tmpfile 2>/dev/null
 	echo -e "$visudoconfig" >$visudo_tmpfile
 
@@ -393,10 +409,7 @@ if [[ "$action" == "uninstall" ]]; then
 	fi
 	enable_charging
 	disable_discharging
-	$battery_binary remove_daemon
-	sudo rm -v "$binfolder/smc" "$binfolder/battery" $visudo_file
-	sudo rm -v -r "$configfolder"
-	pkill -f "/usr/local/bin/battery.*"
+	sudo rm -v $visudo_file
 	exit 0
 fi
 
@@ -522,7 +535,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 	if [[ "$setting" == "recover" ]]; then
 
 		# Before doing anything, log out environment details as a debugging trail
-		log "Debug trail. User: $USER, config folder: $configfolder, logfile: $logfile, file called with 1: $1, 2: $2"
+		log "Debug trail. User: $USER, config folder: $CONFIG_DIR, logfile: $logfile, file called with 1: $1, 2: $2"
 
 		maintain_percentage=$(cat $maintain_percentage_tracker_file 2>/dev/null)
 		if [[ $maintain_percentage ]]; then
@@ -594,7 +607,7 @@ if [[ "$action" == "maintain_voltage_synchronous" ]]; then
 	if [[ "$setting" == "recover" ]]; then
 
 		# Before doing anything, log out environment details as a debugging trail
-		log "Debug trail. User: $USER, config folder: $configfolder, logfile: $logfile, file called with 1: $1, 2: $2"
+		log "Debug trail. User: $USER, config folder: $CONFIG_DIR, logfile: $logfile, file called with 1: $1, 2: $2"
 
 		maintain_voltage=$(cat $maintain_voltage_tracker_file 2>/dev/null)
 		if [[ $maintain_voltage ]]; then
@@ -830,7 +843,7 @@ if [[ "$action" == "create_daemon" ]]; then
 		<string>com.battery.app</string>
 		<key>ProgramArguments</key>
 		<array>
-			<string>$binfolder/battery</string>
+			<string>$battery_executable</string>
 			<string>$call_action</string>
 			<string>recover</string>
 		</array>
@@ -900,10 +913,10 @@ if [[ "$action" == "logs" ]]; then
 	tail -n $amount $logfile
 
 	echo -e "\n🖥️	Battery GUI logs:\n"
-	tail -n $amount "$configfolder/gui.log"
+	tail -n $amount "$CONFIG_DIR/gui.log"
 
 	echo -e "\n📁 Config folder details:\n"
-	ls -lah $configfolder
+	ls -lah $CONFIG_DIR
 
 	echo -e "\n⚙️	Battery data:\n"
 	$battery_binary status

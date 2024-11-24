@@ -1,3 +1,9 @@
+# Battery CLI
+
+Fork of [https://github.com/actuallymentor/battery](https://github.com/actuallymentor/battery).
+Stripped of GUI. Adjusted the config directory to XDG_CONFIG_DIR || ~/.config/battery.
+Install with ```brew tap audivir; brew install battery-cli;
+
 # Battery charge limiter for Apple Silicon Macbook devices
 
 <img width="300px" align="right" src="./screenshots/tray.png"/>This tool makes it possible to keep a chronically plugged in Apple Silicon Macbook at `80%` battery, since that will prolong the longevity of the battery. It is free and open-source and will remain that way.
