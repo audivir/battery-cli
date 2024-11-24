@@ -4,7 +4,7 @@ Fork of [https://github.com/actuallymentor/battery](https://github.com/actuallym
 Stripped of GUI. Adjusted the config directory to XDG_CONFIG_DIR || ~/.config/battery.
 Install with:
 ```bash
-brew tap audivir/repo;
+brew tap audivir/repo
 brew install battery-cli
 ```
 
